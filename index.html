@@ -2,124 +2,82 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Nebula Blox | Vercel Edition</title>
-    <script type="importmap">
-      {
-        "imports": {
-          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-          "@google/generative-ai": "https://esm.run/@google/generative-ai"
-        }
-      }
-    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nebula Search | Live</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #050505; font-family: 'Inter', sans-serif; }
-        #ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        :root { --accent: #00ffff; --bg: #050505; }
+        body { background: var(--bg); color: white; font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; }
         
-        /* Chat UI */
-        #chat-container {
-            position: absolute; top: 20px; left: 20px; width: 300px;
-            background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(10px);
-            border-radius: 12px; padding: 15px; border: 1px solid rgba(0, 255, 255, 0.3);
-            color: white; pointer-events: auto;
-        }
-        #ai-label { color: #00ffff; font-size: 10px; font-weight: 900; letter-spacing: 1px; margin-bottom: 4px; }
-        #ai-response { font-size: 14px; line-height: 1.4; opacity: 0.9; }
+        /* Header */
+        .nav { width: 100%; padding: 20px; display: flex; justify-content: center; }
+        .logo { font-size: 24px; font-weight: 900; letter-spacing: -1px; }
+        .logo span { color: var(--accent); }
 
-        /* Input */
-        #controls {
-            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
-            width: 90%; max-width: 500px; display: flex; gap: 8px; pointer-events: auto;
+        /* Search Bar */
+        .search-area { margin-top: 50px; width: 90%; max-width: 600px; position: relative; }
+        input { 
+            width: 100%; padding: 16px 25px; border-radius: 30px; border: 1px solid #333; 
+            background: #111; color: white; font-size: 16px; outline: none; transition: 0.2s;
         }
-        input {
-            flex: 1; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 14px 20px; border-radius: 30px; color: white; outline: none; font-size: 16px;
-        }
-        button {
-            background: #00ffff; color: #000; border: none; padding: 0 25px;
-            border-radius: 30px; font-weight: 800; cursor: pointer; transition: 0.2s;
-        }
-        button:active { transform: scale(0.95); }
+        input:focus { border-color: var(--accent); box-shadow: 0 0 15px rgba(0,255,255,0.1); }
+        
+        /* Results */
+        #results-list { width: 90%; max-width: 700px; margin-top: 40px; padding-bottom: 50px; }
+        .item { background: #0f0f0f; padding: 20px; border-radius: 12px; margin-bottom: 15px; transition: 0.2s; border: 1px solid #1a1a1a; }
+        .item:hover { border-color: var(--accent); background: #151515; }
+        .item a { color: var(--accent); font-size: 18px; text-decoration: none; font-weight: bold; display: block; }
+        .item cite { color: #555; font-style: normal; font-size: 12px; margin-bottom: 5px; display: block; }
+        .item p { color: #bbb; font-size: 14px; margin-top: 8px; line-height: 1.5; }
     </style>
 </head>
 <body>
-    <div id="ui">
-        <div id="chat-container">
-            <div id="ai-label">GNEBULABLOX CORE</div>
-            <div id="ai-response">Nebula System Online. Input command...</div>
-        </div>
-        <div id="controls">
-            <input type="text" id="chat-input" placeholder="Type to GNebulaBlox...">
-            <button id="send-btn">SEND</button>
-        </div>
+
+    <div class="nav"><div class="logo">NEBULA<span>SEARCH</span></div></div>
+
+    <div class="search-area">
+        <input type="text" id="query" placeholder="Search the nebula..." onkeypress="if(event.key==='Enter') doSearch()">
     </div>
 
-    <script type="module">
-        import * as THREE from 'three';
-        import { GoogleGenerativeAI } from "@google/generative-ai";
+    <div id="results-list"></div>
 
-        // --- 1. 3D ENGINE SETUP ---
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
+    <script>
+        // PASTE YOUR API KEY HERE
+        const API_KEY = "AIzaSyCVs-1lCznUR0Dujk_IQlaZy2nSpC6lYAI";
+        // YOUR CX ID from the script you provided
+        const CX_ID = "b41293cb212ad45b3"; 
 
-        // Grid & Lights
-        scene.add(new THREE.GridHelper(100, 40, 0x00ffff, 0x222222));
-        const ambient = new THREE.AmbientLight(0xffffff, 0.6); scene.add(ambient);
-        const point = new THREE.PointLight(0x00ffff, 10, 50); point.position.set(5, 5, 5); scene.add(point);
+        async function doSearch() {
+            const q = document.getElementById('query').value;
+            const list = document.getElementById('results-list');
+            if(!q) return;
 
-        // Player Model
-        const player = new THREE.Group();
-        const body = new THREE.Mesh(new THREE.BoxGeometry(1, 1.2, 0.6), new THREE.MeshStandardMaterial({ color: 0x0055ff }));
-        const head = new THREE.Mesh(new THREE.SphereGeometry(0.45), new THREE.MeshStandardMaterial({ color: 0xffdbac }));
-        head.position.y = 1;
-        player.add(body, head); player.position.y = 1; scene.add(player);
+            list.innerHTML = "<p style='text-align:center; opacity:0.5'>Querying web index...</p>";
 
-        camera.position.set(0, 6, 12);
-        camera.lookAt(player.position);
-
-        // --- 2. AI CONFIGURATION ---
-        const API_KEY = "AIzaSyCVs-1lCznUR0Dujk_IQlaZy2nSpC6lYAI"; 
-        const genAI = new GoogleGenerativeAI(API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-        async function askAI() {
-            const input = document.getElementById('chat-input');
-            const output = document.getElementById('ai-response');
-            if (!input.value.trim()) return;
-
-            const text = input.value;
-            input.value = "";
-            output.innerText = "Transmitting to Nebula...";
+            const url = `https://www.googleapis.com/customsearch/v1?key=${API_KEY}&cx=${CX_ID}&q=${encodeURIComponent(q)}`;
 
             try {
-                const result = await model.generateContent("You are GNebulaBlox, a helpful AI in a space-themed 3D world. Respond in 15 words or less: " + text);
-                const response = await result.response;
-                output.innerText = response.text();
+                const response = await fetch(url);
+                const data = await response.json();
+                list.innerHTML = "";
+
+                if(data.items) {
+                    data.items.forEach(res => {
+                        const div = document.createElement('div');
+                        div.className = 'item';
+                        div.innerHTML = `
+                            <cite>${res.displayLink}</cite>
+                            <a href="${res.link}" target="_blank">${res.title}</a>
+                            <p>${res.snippet}</p>
+                        `;
+                        list.appendChild(div);
+                    });
+                } else {
+                    list.innerHTML = "<p style='text-align:center'>No results found in this sector.</p>";
+                }
             } catch (err) {
-                console.error(err);
-                output.innerText = "Error: System Overload (Check Console)";
+                list.innerHTML = "<p style='text-align:center; color:red'>Search failed. Check your API quota.</p>";
             }
         }
-
-        document.getElementById('send-btn').onclick = askAI;
-        document.getElementById('chat-input').onkeypress = (e) => { if(e.key === 'Enter') askAI(); };
-
-        // --- 3. ANIMATION LOOP ---
-        function animate() {
-            requestAnimationFrame(animate);
-            player.rotation.y += 0.005; // Gentle spin
-            renderer.render(scene, camera);
-        }
-        animate();
-
-        window.onresize = () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        };
     </script>
 </body>
 </html>

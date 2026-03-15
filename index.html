@@ -13,40 +13,27 @@
       }
     </script>
     <style>
-        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; background: #111; }
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; background: #000; }
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-        
-        /* Roblox-style Chat */
         #chat-box { 
             position: absolute; top: 20px; left: 20px; width: 280px; 
-            background: rgba(0,0,0,0.6); border-radius: 10px; padding: 15px;
-            color: white; pointer-events: auto; backdrop-filter: blur(5px);
+            background: rgba(0,0,0,0.7); border-radius: 12px; padding: 15px;
+            color: white; pointer-events: auto; backdrop-filter: blur(10px);
+            border: 1px solid rgba(0,255,255,0.2);
         }
-        #ai-name { color: #00ffff; font-size: 10px; font-weight: bold; margin-bottom: 5px; }
-        #ai-text { font-size: 14px; line-height: 1.4; }
-
-        /* Input Area */
+        #ai-name { color: #00ffff; font-size: 11px; font-weight: 900; margin-bottom: 5px; text-transform: uppercase; }
+        #ai-text { font-size: 14px; line-height: 1.4; font-weight: 500; }
         #input-container {
-            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
             width: 90%; max-width: 500px; display: flex; gap: 10px; pointer-events: auto;
         }
         input { 
-            flex: 1; padding: 12px; border-radius: 20px; border: none; 
-            background: rgba(255,255,255,0.1); color: white; outline: none;
+            flex: 1; padding: 15px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.2); 
+            background: rgba(255,255,255,0.1); color: white; outline: none; font-size: 16px;
         }
         button { 
-            background: #00ffff; border: none; padding: 10px 20px; 
-            border-radius: 20px; font-weight: bold; cursor: pointer; 
-        }
-
-        /* Virtual Joystick */
-        #joystick-wrapper {
-            position: absolute; bottom: 40px; left: 40px; width: 100px; height: 100px;
-            background: rgba(255,255,255,0.1); border-radius: 50%; pointer-events: auto;
-        }
-        #joystick-knob {
-            position: absolute; top: 25px; left: 25px; width: 50px; height: 50px;
-            background: white; border-radius: 50%;
+            background: #00ffff; border: none; padding: 0 25px; 
+            border-radius: 30px; font-weight: bold; cursor: pointer; color: #000;
         }
     </style>
 </head>
@@ -54,104 +41,69 @@
     <div id="ui-layer">
         <div id="chat-box">
             <div id="ai-name">GNEBULABLOX AI</div>
-            <div id="ai-text">Welcome to the Web Edition! Ask me anything.</div>
+            <div id="ai-text">Connected to Vercel. Systems nominal.</div>
         </div>
-
         <div id="input-container">
-            <input type="text" id="user-input" placeholder="Chat with AI...">
+            <input type="text" id="user-input" placeholder="Say something to the AI...">
             <button onclick="askAI()">SEND</button>
         </div>
-
-        <div id="joystick-wrapper"><div id="joystick-knob"></div></div>
     </div>
 
     <script type="module">
         import * as THREE from 'three';
         import { GoogleGenerativeAI } from "@google/generative-ai";
 
-        // --- 3D SCENE SETUP ---
+        // --- 3D ENGINE ---
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x222222);
+        scene.background = new THREE.Color(0x111111);
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // Lights
-        const light = new THREE.DirectionalLight(0xffffff, 1);
-        light.position.set(5, 10, 7.5);
-        scene.add(light);
-        scene.add(new THREE.AmbientLight(0x404040));
+        const light = new THREE.PointLight(0x00ffff, 2, 50); light.position.set(5, 5, 5); scene.add(light);
+        scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+        scene.add(new THREE.GridHelper(200, 50, 0x00ffff, 0x222222));
 
-        // Floor (The Baseplate)
-        const grid = new THREE.GridHelper(100, 100, 0x444444, 0x222222);
-        scene.add(grid);
-
-        // Player (The Nebula Character)
-        const group = new THREE.Group();
-        const torso = new THREE.Mesh(new THREE.BoxGeometry(1, 1.2, 0.5), new THREE.MeshStandardMaterial({ color: 0x0077ff }));
-        const head = new THREE.Mesh(new THREE.SphereGeometry(0.4), new THREE.MeshStandardMaterial({ color: 0xffdbac }));
+        const char = new THREE.Group();
+        const body = new THREE.Mesh(new THREE.BoxGeometry(1, 1.2, 0.6), new THREE.MeshStandardMaterial({ color: 0x0066ff }));
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.45), new THREE.MeshStandardMaterial({ color: 0xffdbac }));
         head.position.y = 1;
-        const lLeg = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.8, 0.4), new THREE.MeshStandardMaterial({ color: 0x111111 }));
-        const rLeg = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.8, 0.4), new THREE.MeshStandardMaterial({ color: 0x111111 }));
-        lLeg.position.set(-0.25, -1, 0); rLeg.position.set(0.25, -1, 0);
-        group.add(torso, head, lLeg, rLeg);
-        group.position.y = 1.5;
-        scene.add(group);
+        char.add(body, head); char.position.y = 1; scene.add(char);
 
-        camera.position.set(0, 5, 10);
-        camera.lookAt(group.position);
+        camera.position.set(0, 5, 10); camera.lookAt(char.position);
 
-        // --- AI LOGIC ---
+        // --- AI STABLE CONNECTION ---
         const API_KEY = "AIzaSyAgSd5IVtW92TfS3sdb7k8Nc8o362t5a-M";
         const genAI = new GoogleGenerativeAI(API_KEY);
 
         window.askAI = async () => {
             const input = document.getElementById('user-input');
-            const aiDisplay = document.getElementById('ai-text');
+            const display = document.getElementById('ai-text');
             if (!input.value) return;
 
-            const prompt = input.value;
+            const userPrompt = input.value;
             input.value = "";
-            aiDisplay.innerText = "Thinking...";
+            display.innerText = "Processing Nebula data...";
 
             try {
+                // Use the v1 stable model
                 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-                const result = await model.generateContent("You are GNebulaBlox. Keep it short: " + prompt);
-                aiDisplay.innerText = result.response.text();
-            } catch (e) {
-                aiDisplay.innerText = "Error connecting to Nebula Servers.";
+                const result = await model.generateContent("You are GNebulaBlox, a robot in a space game. Keep it under 15 words. User: " + userPrompt);
+                const response = await result.response;
+                display.innerText = response.text();
+            } catch (err) {
+                console.error(err);
+                display.innerText = "Error: Key restricted or expired. Check AI Studio.";
             }
         };
 
-        // --- MOVEMENT ---
-        let move = { x: 0, z: 0 };
         function animate() {
             requestAnimationFrame(animate);
-            group.position.x += move.x;
-            group.position.z += move.z;
-            
-            // Basic Leg Animation
-            if(move.x !== 0 || move.z !== 0) {
-                const time = Date.now() * 0.01;
-                lLeg.rotation.x = Math.sin(time) * 0.5;
-                rLeg.rotation.x = -Math.sin(time) * 0.5;
-            }
-            
-            camera.position.x = group.position.x;
-            camera.position.z = group.position.z + 10;
+            char.rotation.y += 0.005; // Make him spin slowly so we know it's not frozen
             renderer.render(scene, camera);
         }
         animate();
-
-        // Keyboard Controls
-        window.addEventListener('keydown', (e) => {
-            if(e.key === 'w') move.z = -0.1;
-            if(e.key === 's') move.z = 0.1;
-            if(e.key === 'a') move.x = -0.1;
-            if(e.key === 'd') move.x = 0.1;
-        });
-        window.addEventListener('keyup', () => move = {x:0, z:0});
     </script>
 </body>
 </html>

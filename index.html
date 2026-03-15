@@ -2,82 +2,98 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nebula Search | Live</title>
+    <title>Nebula Search</title>
     <style>
-        :root { --accent: #00ffff; --bg: #050505; }
-        body { background: var(--bg); color: white; font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; }
+        :root { --nebula: #00ffff; --bg: #080808; }
+        body { background: var(--bg); color: white; font-family: 'Inter', system-ui, sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; }
         
-        /* Header */
-        .nav { width: 100%; padding: 20px; display: flex; justify-content: center; }
-        .logo { font-size: 24px; font-weight: 900; letter-spacing: -1px; }
-        .logo span { color: var(--accent); }
+        /* Sleek Header */
+        .header { margin-top: 100px; text-align: center; transition: 0.5s; }
+        .header h1 { font-size: 3.5rem; font-weight: 900; letter-spacing: -3px; margin: 0; }
+        .header h1 span { color: var(--nebula); text-shadow: 0 0 20px rgba(0,255,255,0.4); }
 
         /* Search Bar */
-        .search-area { margin-top: 50px; width: 90%; max-width: 600px; position: relative; }
+        .search-wrap { width: 90%; max-width: 600px; margin-top: 30px; position: relative; }
         input { 
-            width: 100%; padding: 16px 25px; border-radius: 30px; border: 1px solid #333; 
-            background: #111; color: white; font-size: 16px; outline: none; transition: 0.2s;
+            width: 100%; padding: 18px 25px; border-radius: 50px; border: 1px solid #222; 
+            background: #111; color: white; font-size: 18px; outline: none; transition: 0.3s;
+            box-sizing: border-box;
         }
-        input:focus { border-color: var(--accent); box-shadow: 0 0 15px rgba(0,255,255,0.1); }
+        input:focus { border-color: var(--nebula); box-shadow: 0 0 25px rgba(0,255,255,0.15); }
         
-        /* Results */
-        #results-list { width: 90%; max-width: 700px; margin-top: 40px; padding-bottom: 50px; }
-        .item { background: #0f0f0f; padding: 20px; border-radius: 12px; margin-bottom: 15px; transition: 0.2s; border: 1px solid #1a1a1a; }
-        .item:hover { border-color: var(--accent); background: #151515; }
-        .item a { color: var(--accent); font-size: 18px; text-decoration: none; font-weight: bold; display: block; }
-        .item cite { color: #555; font-style: normal; font-size: 12px; margin-bottom: 5px; display: block; }
-        .item p { color: #bbb; font-size: 14px; margin-top: 8px; line-height: 1.5; }
+        button { 
+            position: absolute; right: 10px; top: 8px; background: var(--nebula); color: black; 
+            border: none; padding: 10px 25px; border-radius: 40px; font-weight: 800; cursor: pointer;
+        }
+
+        /* Result Area */
+        #results { width: 90%; max-width: 750px; margin-top: 50px; padding-bottom: 100px; }
+        .res-card { 
+            background: #121212; padding: 25px; border-radius: 20px; margin-bottom: 20px; 
+            border: 1px solid #1a1a1a; transition: 0.3s;
+        }
+        .res-card:hover { transform: translateY(-3px); border-color: var(--nebula); background: #151515; }
+        .res-card a { color: var(--nebula); font-size: 20px; text-decoration: none; font-weight: bold; }
+        .res-card cite { color: #555; display: block; font-size: 13px; margin-bottom: 10px; font-style: normal; }
+        .res-card p { color: #aaa; font-size: 15px; line-height: 1.6; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-    <div class="nav"><div class="logo">NEBULA<span>SEARCH</span></div></div>
-
-    <div class="search-area">
-        <input type="text" id="query" placeholder="Search the nebula..." onkeypress="if(event.key==='Enter') doSearch()">
+    <div class="header" id="neb-header">
+        <h1>NEBULA<span>SEARCH</span></h1>
     </div>
 
-    <div id="results-list"></div>
+    <div class="search-wrap">
+        <input type="text" id="neb-input" placeholder="Scan the web..." autocomplete="off">
+        <button onclick="launchSearch()">GO</button>
+    </div>
+
+    <div id="results"></div>
 
     <script>
-        // PASTE YOUR API KEY HERE
         const API_KEY = "AIzaSyCVs-1lCznUR0Dujk_IQlaZy2nSpC6lYAI";
-        // YOUR CX ID from the script you provided
-        const CX_ID = "b41293cb212ad45b3"; 
+        const CX_ID = "b41293cb212ad45b3";
 
-        async function doSearch() {
-            const q = document.getElementById('query').value;
-            const list = document.getElementById('results-list');
-            if(!q) return;
+        async function launchSearch() {
+            const query = document.getElementById('neb-input').value;
+            const container = document.getElementById('results');
+            if(!query) return;
 
-            list.innerHTML = "<p style='text-align:center; opacity:0.5'>Querying web index...</p>";
+            // Move header up when searching
+            document.getElementById('neb-header').style.marginTop = "40px";
+            container.innerHTML = "<p style='text-align:center; opacity:0.3'>Accessing Nebula Web-Index...</p>";
 
-            const url = `https://www.googleapis.com/customsearch/v1?key=${API_KEY}&cx=${CX_ID}&q=${encodeURIComponent(q)}`;
+            const url = `https://www.googleapis.com/customsearch/v1?key=${API_KEY}&cx=${CX_ID}&q=${encodeURIComponent(query)}`;
 
             try {
                 const response = await fetch(url);
                 const data = await response.json();
-                list.innerHTML = "";
+                container.innerHTML = "";
 
                 if(data.items) {
-                    data.items.forEach(res => {
-                        const div = document.createElement('div');
-                        div.className = 'item';
-                        div.innerHTML = `
-                            <cite>${res.displayLink}</cite>
-                            <a href="${res.link}" target="_blank">${res.title}</a>
-                            <p>${res.snippet}</p>
+                    data.items.forEach(item => {
+                        const card = document.createElement('div');
+                        card.className = 'res-card';
+                        card.innerHTML = `
+                            <cite>${item.displayLink}</cite>
+                            <a href="${item.link}" target="_blank">${item.title}</a>
+                            <p>${item.snippet}</p>
                         `;
-                        list.appendChild(div);
+                        container.appendChild(card);
                     });
                 } else {
-                    list.innerHTML = "<p style='text-align:center'>No results found in this sector.</p>";
+                    container.innerHTML = "<p style='text-align:center'>No results. Check 'Search the entire web' setting in Google CSE.</p>";
                 }
             } catch (err) {
-                list.innerHTML = "<p style='text-align:center; color:red'>Search failed. Check your API quota.</p>";
+                container.innerHTML = "<p style='text-align:center; color:red'>System Error: Connection to Google Interrupted.</p>";
             }
         }
+
+        // Search on 'Enter'
+        document.getElementById('neb-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') launchSearch();
+        });
     </script>
 </body>
 </html>
